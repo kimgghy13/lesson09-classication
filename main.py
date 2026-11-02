@@ -6,7 +6,12 @@ import streamlit as st
 
 APP_TITLE = "뇌졸중 예측 실습실"
 APP_ICON = "🧠"
-DATA_URL = "https://raw.githubusercontent.com/kimgghy13/data/refs/main/stroke.csv"
+# 알려 준 주소는 404가 나서, 올바른 형태의 주소들을 차례로 시도한다.
+DATA_URLS = [
+    "https://raw.githubusercontent.com/kimgghy13/data/refs/heads/main/stroke.csv",
+    "https://raw.githubusercontent.com/kimgghy13/data/main/stroke.csv",
+    "https://raw.githubusercontent.com/kimgghy13/data/refs/main/stroke.csv",
+]
 SAVE_DIR = Path(__file__).parent / "내_기록"
 SAVE_FILE = SAVE_DIR / "기록.json"
 
@@ -53,7 +58,13 @@ def save_notes(notes: dict) -> None:
 # ---------- 데이터 ----------
 @st.cache_data(show_spinner="데이터를 불러오는 중...")
 def load_data() -> pd.DataFrame:
-    return pd.read_csv(DATA_URL, encoding="utf-8")
+    last_error = None
+    for url in DATA_URLS:
+        try:
+            return pd.read_csv(url, encoding="utf-8")
+        except Exception as e:
+            last_error = e
+    raise last_error
 
 
 def describe_values(series: pd.Series) -> str:
@@ -73,7 +84,7 @@ try:
     df = load_data()
 except Exception as e:  # 네트워크 오류 등
     st.title(f"{APP_ICON} {APP_TITLE}")
-    st.error(f"데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.\n\n{e}")
+    st.error(f"데이터를 불러오지 못했어요. 인터넷 연결과 데이터 주소를 확인해 주세요.\n\n{e}")
     st.stop()
 
 notes = load_notes()
