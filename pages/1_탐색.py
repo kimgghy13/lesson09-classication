@@ -1,11 +1,27 @@
+import re
+from pathlib import Path
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-# ※ 첫 화면(메인 파일)에서 쓰는 주소와 똑같이 맞춰 주세요.
-DATA_URL = "https://example.com/healthcare-dataset-stroke-data.csv"
-
 st.title("탐색")
+
+
+def find_main_url():
+    """첫 화면(pages 폴더 밖의 .py 파일)에서 데이터 주소를 찾는다."""
+    root = Path(__file__).resolve().parent.parent
+    found = []
+    for path in sorted(root.glob("*.py")):
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        found += re.findall(r"https?://[^\s\"'()]+", text)
+    csv_urls = [u for u in found if ".csv" in u.lower()]
+    if csv_urls:
+        return csv_urls[0]
+    return found[0] if found else None
 
 
 @st.cache_data
@@ -13,10 +29,18 @@ def load_data(url):
     return pd.read_csv(url, encoding="utf-8")
 
 
+url = find_main_url()
+if url is None:
+    url = st.text_input("첫 화면에서 쓰는 데이터 주소(CSV)를 붙여 넣어 주세요.").strip()
+    if not url:
+        st.info("주소를 입력하면 아래에 분석 결과가 나타나요.")
+        st.stop()
+st.caption(f"데이터 주소: {url}")
+
 try:
-    df = load_data(DATA_URL)
+    df = load_data(url)
 except Exception as e:
-    st.error(f"데이터를 읽지 못했어요. DATA_URL을 확인해 주세요.\n\n주소: {DATA_URL}\n\n오류: {e}")
+    st.error(f"데이터를 읽지 못했어요.\n\n주소: {url}\n\n오류: {e}")
     st.stop()
 
 needed = ["age", "avg_glucose_level", "hypertension", "heart_disease",
